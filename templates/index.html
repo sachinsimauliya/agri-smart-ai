@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AgriSmart Ultimate AI</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --primary: #10b981; 
+            --dark: #0f172a; 
+            --bg: #f8fafc; 
+            --glass: #ffffff; 
+            --shadow: 0 6px 15px rgba(0,0,0,0.08); 
+            --sidebar-shadow: 2px 0 15px rgba(0,0,0,0.15); 
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; flex-direction: column; }
+        
+        /* Layout */
+        .app-body { display: flex; flex: 1; overflow: hidden; }
+        
+        /* --- SIDEBAR --- */
+        .sidebar { 
+            width: 260px; 
+            background: var(--glass); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: var(--sidebar-shadow); 
+            z-index: 10; 
+            overflow-y: auto; 
+            transition: box-shadow 0.3s;
+        }
+        .main { flex: 1; padding: 30px; overflow-y: auto; scroll-behavior: smooth; }
+        
+        /* Sidebar Elements */
+        .logo { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .nav-btn { 
+            padding: 12px 15px; border: none; background: none; text-align: left; font-size: 14px; 
+            color: #475569; cursor: pointer; border-radius: 8px; margin-bottom: 5px; width: 100%; 
+            transition: 0.2s; display: flex; align-items: center; gap: 12px; font-weight: 600; 
+        }
+        .nav-btn:hover { background: #e0f2f1; color: var(--primary); }
+        .nav-btn.active { 
+            background: var(--primary); color: white; font-weight: 700; 
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); 
+            transform: translateY(-1px);
+        }
+        
+        /* Language Toggle Style */
+        #lang-toggle {
+            padding: 8px 15px;
+            margin-bottom: 25px;
+            background: #f0fdf4;
+            color: var(--primary);
+            border: 1px solid #d1fae5;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+        #lang-toggle:hover {
+            background: #e0f2f1;
+        }
+
+        /* Cards & Section Styling */
+        .card { 
+            position: relative; 
+            background: var(--glass); padding: 30px; border-radius: 12px; 
+            box-shadow: var(--shadow); max-width: 900px; margin: auto; 
+            display: none; animation: fadeIn 0.4s; 
+            overflow: hidden;
+        }
+        .card.active { display: block; }
+
+        /* Background Pattern for Cards */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            z-index: 1;
+            pointer-events: none;
+            border-radius: 12px;
+        }
+
+        h2 { 
+            margin-top: 0; color: var(--dark); border-bottom: 1px solid #e2e8f0; 
+            padding-bottom: 15px; margin-bottom: 25px; font-size: 22px;
+            position: relative; z-index: 2;
+        }
+        
+        /* FEATURE-SPECIFIC BACKGROUNDS */
+        #yield::before { background: linear-gradient(135deg, #10b981, #d1fae5); }
+        #recommend::before { background: linear-gradient(135deg, #84cc16, #f7fee7); }
+        #diagnostics::before { background: linear-gradient(135deg, #f59e0b, #fffbeb); } 
+        #storage::before { background: linear-gradient(135deg, #f97316, #fff7ed); }
+        #water::before { background: linear-gradient(135deg, #3b82f6, #eff6ff); }
+        #fertilizer::before { background: linear-gradient(135deg, #8b5cf6, #f5f3ff); }
+
+
+        /* Forms */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; font-size: 13px; text-transform: uppercase; position: relative; z-index: 2; }
+        .unit-label { font-size: 11px; font-weight: 500; color: #64748b; margin-left: 5px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; box-sizing: border-box; position: relative; z-index: 2; }
+        .btn-action { 
+            width: 100%; padding: 15px; background: var(--primary); color: white; 
+            border: none; border-radius: 6px; font-size: 16px; font-weight: 700; 
+            cursor: pointer; margin-top: 25px; transition: 0.3s; 
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3); position: relative; z-index: 2;
+        }
+        .result-box { 
+            margin-top: 25px; padding: 20px; background: #ecfdf5; border-radius: 8px; 
+            border: 1px solid #d1fae5; color: #064e3b; display: none; text-align: center; 
+            font-size: 18px; position: relative; z-index: 2;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="app-body">
+    <div class="sidebar">
+        <div class="logo"><i class="fas fa-seedling"></i> AgriSmart AI</div>
+        
+        <button id="lang-toggle" onclick="toggleLanguage()">Language: EN 🇬🇧 / HI 🇮🇳</button>
+
+        <button class="nav-btn active" id="nav-yield" onclick="tab('yield')">📈 Yield AI</button>
+        <button class="nav-btn" id="nav-recommend" onclick="tab('recommend')">🌱 Recommender</button>
+        <button class="nav-btn" id="nav-diagnostics" onclick="tab('diagnostics')">🔬 Diagnostics AI</button>
+        <button class="nav-btn" id="nav-storage" onclick="tab('storage')">📦 Storage AI</button>
+        <button class="nav-btn" id="nav-water" onclick="tab('water')">💧 Irrigation</button>
+        <button class="nav-btn" id="nav-fertilizer" onclick="tab('fertilizer')">🧪 Fertilizer</button>
+    </div>
+
+    <div class="main">
+        
+        <div id="yield" class="card active">
+            <h2 id="yield-header">📈 Yield Prediction</h2>
+            <div class="grid-2">
+                <div><label id="y-label-temp">Temperature (<span class="unit-label">°C</span>)</label><input type="number" id="y_temp" value="25"></div>
+                <div><label id="y-label-hum">Humidity (<span class="unit-label">%</span>)</label><input type="number" id="y_hum" value="80"></div>
+                <div><label id="y-label-rain">Rainfall (<span class="unit-label">mm</span>)</label><input type="number" id="y_rain" value="200"></div>
+                <div><label id="y-label-ph">pH Level</label><input type="number" id="y_ph" value="6.5"></div>
+            </div>
+            <div class="grid-2" style="margin-top:20px">
+                <div>
+                    <label id="y-label-crop">Crop Type</label>
+                    <select id="y_crop">
+                        <option value="rice" id="y-opt-rice">Rice</option>
+                        <option value="cotton" id="y-opt-cotton">Cotton</option>
+                        <option value="maize" id="y-opt-maize">Maize</option>
+                        <option value="wheat" id="y-opt-wheat">Wheat</option>
+                        <option value="sugarcane" id="y-opt-sugarcane">Sugarcane</option>
+                        <option value="chickpea" id="y-opt-chickpea">Chickpea</option>
+                        <option value="pomegranate" id="y-opt-pomegranate">Pomegranate</option>
+                        <option value="apple" id="y-opt-apple">Apple</option>
+                        <option value="banana" id="y-opt-banana">Banana</option>
+                    </select>
+                </div>
+                <div>
+                    <label id="y-label-model">AI Model</label>
+                    <select id="y_model">
+                        <option value="Ensemble">Super Ensemble</option>
+                        <option value="LSTM">Attention-LSTM</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action" id="y-btn-predict" onclick="predictYield()">Predict Yield</button>
+            <div id="y_res" class="result-box"></div>
+        </div>
+
+        <div id="recommend" class="card">
+            <h2 id="r-header">🌱 Crop Recommender</h2>
+            <div class="grid-2">
+                <div><label id="r-label-n">Nitrogen (<span class="unit-label">N - kg/ha</span>)</label><input type="number" id="r_n" placeholder="90"></div>
+                <div><label id="r-label-p">Phosphorus (<span class="unit-label">P - kg/ha</span>)</label><input type="number" id="r_p" placeholder="40"></div>
+                <div><label id="r-label-k">Potassium (<span class="unit-label">K - kg/ha</span>)</label><input type="number" id="r_k" placeholder="40"></div>
+                <div><label id="r-label-rain">Rainfall (<span class="unit-label">mm</span>)</label><input type="number" id="r_rain" placeholder="200"></div>
+                <div><label id="r-label-temp">Temperature (<span class="unit-label">°C</span>)</label><input type="number" id="r_temp" placeholder="25"></div>
+                <div><label id="r-label-hum">Humidity (<span class="unit-label">%</span>)</label><input type="number" id="r_hum" placeholder="80"></div>
+                <div><label id="r-label-ph">Soil pH Level</label><input type="number" id="r_ph" placeholder="6.5"></div>
+            </div>
+            <button class="btn-action" id="r-btn-find" onclick="recommendCrop()">Find Best Crop</button>
+            <div id="r_res" class="result-box"></div>
+        </div>
+        
+        <div id="diagnostics" class="card">
+            <h2 id="d-header">🔬 Disease Diagnostics AI</h2>
+            <p id="d-p-info">Upload an image of a leaf to instantly identify diseases and get treatment advice. (Uses VGG16 Transfer Learning)</p>
+            <form id="diagnostics-form">
+                <input type="file" name="image" id="diag_image" accept="image/*" required style="margin-top:20px; padding:10px 0;">
+                <button type="submit" class="btn-action" id="d-btn-analyze">Analyze Leaf Image</button>
+            </form>
+            <div id="diag_res" class="result-box" style="text-align:left;"></div>
+        </div>
+
+        <div id="storage" class="card">
+            <h2 id="s-header">📦 Storage Life Advisor</h2>
+            <div class="grid-2">
+                <div><label id="s-label-temp">Temperature (<span class="unit-label">°C</span>)</label><input type="number" id="st_temp" placeholder="Temperature (°C)"></div>
+                <div><label id="s-label-hum">Humidity (<span class="unit-label">%</span>)</label><input type="number" id="st_hum" placeholder="Humidity (%)"></div>
+                <div><label id="s-label-crop">Crop Type</label>
+                    <select id="st_crop">
+                        <option value="Rice" id="st-opt-rice">Rice (Base 365 Days)</option>
+                        <option value="Maize" id="st-opt-maize">Maize (Base 180 Days)</option>
+                        <option value="Cotton" id="st-opt-cotton">Cotton (Base 250 Days)</option>
+                        <option value="Chickpea" id="st-opt-chickpea">Chickpea (Base 150 Days)</option>
+                        <option value="Pomegranate" id="st-opt-pomegranate">Pomegranate (Base 45 Days)</option>
+                        <option value="Apple" id="st-opt-apple">Apple (Base 60 Days)</option>
+                        <option value="Grapes" id="st-opt-grapes">Grapes (Base 15 Days)</option>
+                        <option value="Banana" id="st-opt-banana">Banana (Base 7 Days)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action" id="s-btn-check" onclick="checkStorage()">Check Shelf Life</button>
+            <div id="st_res" class="result-box"></div>
+        </div>
+        
+        <div id="water" class="card">
+            <h2 id="w-header">💧 Smart Irrigation System</h2>
+            <div class="grid-2">
+                <div><label id="w-label-temp">Temperature (<span class="unit-label">°C</span>)</label><input type="number" id="w_temp" placeholder="Temperature (°C)"></div>
+                <div><label id="w-label-hum">Humidity (<span class="unit-label">%</span>)</label><input type="number" id="w_hum" placeholder="Humidity (%)"></div>
+                <div><label id="w-label-rain">Recent Rain (<span class="unit-label">mm</span>)</label><input type="number" id="w_rain" placeholder="Recent Rain (mm)"></div>
+                <div>
+                    <label id="w-label-crop">Crop Type</label>
+                    <select id="w_crop">
+                        <option value="Rice" id="w-opt-rice">Rice (High Water)</option>
+                        <option value="Maize" id="w-opt-maize">Maize (Moderate Water)</option>
+                        <option value="Cotton" id="w-opt-cotton">Cotton (Lower Water)</option>
+                        <option value="Chickpea" id="w-opt-chickpea">Chickpea (Low Water)</option>
+                        <option value="Fruits" id="w-opt-fruits">Fruits (Lower Water)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action" id="w-btn-check" onclick="smartWater()">Check Water Need</button>
+            <div id="w_res" class="result-box"></div>
+        </div>
+        
+        <div id="fertilizer" class="card">
+            <h2 id="f-header">🧪 Fertilizer Advisor</h2>
+            <div class="grid-2">
+                <div><label id="f-label-n">Nitrogen (<span class="unit-label">N - kg/ha</span>)</label><input type="number" id="f_n" placeholder="N (kg/ha)"></div>
+                <div><label id="f-label-p">Phosphorus (<span class="unit-label">P - kg/ha</span>)</label><input type="number" id="f_p" placeholder="P (kg/ha)"></div>
+                <div><label id="f-label-k">Potassium (<span class="unit-label">K - kg/ha</span>)</label><input type="number" id="f_k" placeholder="K (kg/ha)"></div>
+                <div><label id="f-label-crop">Crop Type</label>
+                    <select id="f_crop">
+                        <option value="rice" id="f-opt-rice">Rice</option>
+                        <option value="maize" id="f-opt-maize">Maize</option>
+                        <option value="cotton" id="f-opt-cotton">Cotton</option>
+                        <option value="chickpea" id="f-opt-chickpea">Chickpea</option>
+                        <option value="wheat" id="f-opt-wheat">Wheat</option>
+                        <option value="sugarcane" id="f-opt-sugarcane">Sugarcane</option>
+                        <option value="coffee" id="f-opt-coffee">Coffee</option>
+                        <option value="fruit trees" id="f-opt-fruit-trees">Fruit Trees</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action" id="f-btn-advice" onclick="getFert()">Get Fertilizer Advice</button>
+            <div id="f_res" class="result-box"></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // --- LANGUAGE GLOBAL STATE ---
+    let currentLanguage = 'EN';
+    
+    // --- HINDI TRANSLATION DICTIONARY ---
+    const translations = {
+        'HI': {
+            // Sidebar Navigation
+            'nav-yield': '📈 उपज एआई', 'nav-recommend': '🌱 फसल सिफारिश', 'nav-diagnostics': '🔬 रोग निदान एआई', 'nav-storage': '📦 भंडारण सलाहकार', 'nav-water': '💧 सिंचाई प्रणाली', 'nav-fertilizer': '🧪 उर्वरक सलाहकार',
+
+            // Headers
+            'yield-header': '📈 उपज भविष्यवाणी', 'r-header': '🌱 फसल सिफारिशकर्ता', 'd-header': '🔬 रोग निदान एआई', 's-header': '📦 भंडारण जीवन सलाहकार', 'w-header': '💧 स्मार्ट सिंचाई प्रणाली', 'f-header': '🧪 उर्वरक सलाहकार',
+
+            // Labels
+            'y-label-temp': 'तापमान', 'y-label-hum': 'आर्द्रता', 'y-label-rain': 'वर्षा', 'y-label-ph': 'पीएच स्तर', 'y-label-crop': 'फसल का प्रकार', 'y-label-model': 'एआई मॉडल',
+            'r-label-n': 'नाइट्रोजन', 'r-label-p': 'फास्फोरस', 'r-label-k': 'पोटेशियम', 'r-label-rain': 'वर्षा', 'r-label-temp': 'तापमान', 'r-label-hum': 'आर्द्रता', 'r-label-ph': 'पीएच स्तर',
+            's-label-temp': 'तापमान', 's-label-hum': 'आर्द्रता', 's-label-crop': 'फसल का प्रकार',
+            'w-label-temp': 'तापमान', 'w-label-hum': 'आर्द्रता', 'w-label-rain': 'हालिया वर्षा', 'w-label-crop': 'फसल का प्रकार',
+            'f-label-n': 'नाइट्रोजन', 'f-label-p': 'फास्फोरस', 'f-label-k': 'पोटेशियम', 'f-label-crop': 'फसल का प्रकार',
+
+            // Buttons
+            'y-btn-predict': 'उपज की भविष्यवाणी करें', 'r-btn-find': 'सर्वश्रेष्ठ फसल ढूंढें', 'd-btn-analyze': 'पत्ती की छवि का विश्लेषण करें', 's-btn-check': 'शेल्फ जीवन की जाँच करें', 'w-btn-check': 'पानी की आवश्यकता की जाँच करें', 'f-btn-advice': 'उर्वरक सलाह लें',
+
+            // Placeholder Text 
+            'ph-temp': 'तापमान (°C)', 'ph-hum': 'आर्द्रता (%)', 'ph-rain': 'वर्षा (मिमी)', 'ph-ph': 'पीएच स्तर',
+            'ph-n': 'नाइट्रोजन (किग्रा/हे)', 'ph-p': 'फास्फोरस (किग्रा/हे)', 'ph-k': 'पोटेशियम (किग्रा/हे)',
+
+            // Option Text 
+            'y-opt-rice': 'चावल', 'y-opt-cotton': 'कपास', 'y-opt-maize': 'मक्का', 'y-opt-wheat': 'गेहूं', 'y-opt-sugarcane': 'गन्ना', 'y-opt-chickpea': 'चना', 'y-opt-pomegranate': 'अनार', 'y-opt-apple': 'सेब', 'y-opt-banana': 'केला',
+            'y-opt-ensemble': 'सुपर एन्सेम्बल', 'y-opt-lstm': 'अटेंशन-एलएसटीएम',
+
+            'st-opt-pomegranate': 'अनार (आधार 45 दिन)', 'st-opt-apple': 'सेब (आधार 60 दिन)', 'st-opt-grapes': 'अंगूर (आधार 15 दिन)', 'st-opt-banana': 'केला (आधार 7 दिन)',
+            'f-opt-wheat': 'गेहूं', 'f-opt-sugarcane': 'गन्ना', 'f-opt-coffee': 'कॉफी', 'f-opt-fruit-trees': 'फलों के पेड़',
+            'f-opt-rice': 'चावल', 'f-opt-maize': 'मक्का', 'f-opt-cotton': 'कपास', 'f-opt-chickpea': 'चना',
+            
+            'st-opt-rice': 'चावल (आधार 365 दिन)', 'st-opt-maize': 'मक्का (आधार 180 दिन)', 'st-opt-cotton': 'कपास (आधार 250 दिन)', 'st-opt-chickpea': 'चना (आधार 150 दिन)',
+            'w-opt-rice': 'चावल (उच्च जल)', 'w-opt-maize': 'मक्का (मध्यम जल)', 'w-opt-cotton': 'कपास (कम जल)', 'w-opt-chickpea': 'चना (कम जल)', 'w-opt-fruits': 'फल (कम जल)',
+
+            // Other Text
+            'd-p-info': 'रोगों को तुरंत पहचानने और उपचार की सलाह लेने के लिए पत्ती की छवि अपलोड करें। (VGG16 ट्रांसफर लर्निंग का उपयोग करता है)',
+            'result-crop-best': 'सर्वश्रेष्ठ फसल:',
+        },
+        'EN': {
+            'nav-yield': '📈 Yield AI', 'nav-recommend': '🌱 Recommender', 'nav-diagnostics': '🔬 Diagnostics AI', 'nav-storage': '📦 Storage AI', 'nav-water': '💧 Irrigation', 'nav-fertilizer': '🧪 Fertilizer',
+            'yield-header': '📈 Yield Prediction', 'r-header': '🌱 Crop Recommender', 'd-header': '🔬 Disease Diagnostics AI', 's-header': '📦 Storage Life Advisor', 'w-header': '💧 Smart Irrigation System', 'f-header': '🧪 Fertilizer Advisor',
+            'y-label-temp': 'Temperature', 'y-label-hum': 'Humidity', 'y-label-rain': 'Rainfall', 'y-label-ph': 'pH Level', 'y-label-crop': 'Crop Type', 'y-label-model': 'AI Model',
+            'r-label-n': 'Nitrogen', 'r-label-p': 'Phosphorus', 'r-label-k': 'Potassium', 'r-label-rain': 'Rainfall', 'r-label-temp': 'Temperature', 'r-label-hum': 'Humidity', 'r-label-ph': 'Soil pH Level',
+            's-label-temp': 'Temperature', 's-label-hum': 'Humidity', 's-label-crop': 'Crop Type',
+            'w-label-temp': 'Temperature', 'w-label-hum': 'Humidity', 'w-label-rain': 'Recent Rain', 'w-label-crop': 'Crop Type',
+            'f-label-n': 'Nitrogen', 'f-label-p': 'Phosphorus', 'f-label-k': 'Potassium', 'f-label-crop': 'Crop Type',
+            'y-btn-predict': 'Predict Yield', 'r-btn-find': 'Find Best Crop', 'd-btn-analyze': 'Analyze Leaf Image', 's-btn-check': 'Check Shelf Life', 'w-btn-check': 'Check Water Need', 'f-btn-advice': 'Get Fertilizer Advice',
+            
+            'ph-temp': 'Temperature (°C)', 'ph-hum': 'Humidity (%)', 'ph-rain': 'Rainfall (mm)', 'ph-ph': 'pH Level',
+            'ph-n': '90', 'ph-p': '40', 'ph-k': '40',
+            
+            'y-opt-rice': 'Rice', 'y-opt-cotton': 'Cotton', 'y-opt-maize': 'Maize', 'y-opt-wheat': 'Wheat', 'y-opt-sugarcane': 'Sugarcane', 'y-opt-chickpea': 'Chickpea', 'y-opt-pomegranate': 'Pomegranate', 'y-opt-apple': 'Apple', 'y-opt-banana': 'Banana',
+            'y-opt-ensemble': 'Super Ensemble', 'y-opt-lstm': 'Attention-LSTM',
+            'st-opt-pomegranate': 'Pomegranate (Base 45 Days)', 'st-opt-apple': 'Apple (Base 60 Days)', 'st-opt-grapes': 'Grapes (Base 15 Days)', 'st-opt-banana': 'Banana (Base 7 Days)',
+            'f-opt-wheat': 'Wheat', 'f-opt-sugarcane': 'Sugarcane', 'f-opt-coffee': 'Coffee', 'f-opt-fruit-trees': 'Fruit Trees',
+            'f-opt-rice': 'Rice', 'f-opt-maize': 'Maize', 'f-opt-cotton': 'Cotton', 'f-opt-chickpea': 'Chickpea',
+            
+            'st-opt-rice': 'Rice (Base 365 Days)', 'st-opt-maize': 'Maize (Base 180 Days)', 'st-opt-cotton': 'Cotton (Base 250 Days)', 'st-opt-chickpea': 'Chickpea (Base 150 Days)',
+            'w-opt-rice': 'Rice (High Water)', 'w-opt-maize': 'Maize (Moderate Water)', 'w-opt-cotton': 'Cotton (Lower Water)', 'w-opt-chickpea': 'Chickpea (Low Water)', 'w-opt-fruits': 'Fruits (Lower Water)',
+            'd-p-info': 'Upload an image of a leaf to instantly identify diseases and get treatment advice. (Uses VGG16 Transfer Learning)',
+            'result-crop-best': 'Best Crop:',
+        }
+    };
+
+    // List of element IDs to translate
+    const idsToTranslate = [
+        'nav-yield', 'nav-recommend', 'nav-diagnostics', 'nav-storage', 'nav-water', 'nav-fertilizer',
+        'yield-header', 'r-header', 'd-header', 's-header', 'w-header', 'f-header',
+        'y-label-temp', 'y-label-hum', 'y-label-rain', 'y-label-ph', 'y-label-crop', 'y-label-model',
+        'r-label-n', 'r-label-p', 'r-label-k', 'r-label-rain', 'r-label-temp', 'r-label-hum', 'r-label-ph',
+        's-label-temp', 's-label-hum', 's-label-crop',
+        'w-label-temp', 'w-label-hum', 'w-label-rain', 'w-label-crop',
+        'f-label-n', 'f-label-p', 'f-label-k', 'f-label-crop',
+        'y-btn-predict', 'r-btn-find', 'd-btn-analyze', 's-btn-check', 'w-btn-check', 'f-btn-advice',
+        'd-p-info',
+        // Yield Options (UPDATED)
+        'y-opt-rice', 'y-opt-cotton', 'y-opt-maize', 'y-opt-wheat', 'y-opt-sugarcane', 'y-opt-chickpea', 'y-opt-pomegranate', 'y-opt-apple', 'y-opt-banana',
+        'y-opt-ensemble', 'y-opt-lstm',
+        // Storage Options
+        'st-opt-rice', 'st-opt-maize', 'st-opt-cotton', 'st-opt-chickpea', 'st-opt-pomegranate', 'st-opt-apple', 'st-opt-grapes', 'st-opt-banana',
+        // Irrigation Options
+        'w-opt-rice', 'w-opt-maize', 'w-opt-cotton', 'w-opt-chickpea', 'w-opt-fruits',
+        // Fertilizer Options
+        'f-opt-rice', 'f-opt-maize', 'f-opt-cotton', 'f-opt-chickpea', 'f-opt-wheat', 'f-opt-sugarcane', 'f-opt-coffee', 'f-opt-fruit-trees'
+    ];
+    
+    
+    // List of input IDs whose placeholder text needs to be translated
+    const inputPlaceholders = [
+        {id: 'r_n', key: 'ph-n'}, {id: 'r_p', key: 'ph-p'}, {id: 'r_k', key: 'ph-k'},
+        {id: 'r_rain', key: 'ph-rain'}, {id: 'r_temp', key: 'ph-temp'}, {id: 'r_hum', key: 'ph-hum'}, {id: 'r_ph', key: 'ph-ph'},
+        {id: 'st_temp', key: 'ph-temp'}, {id: 'st_hum', key: 'ph-hum'},
+        {id: 'w_temp', key: 'ph-temp'}, {id: 'w_hum', key: 'ph-hum'}, {id: 'w_rain', key: 'ph-rain'},
+        {id: 'f_n', key: 'ph-n'}, {id: 'f_p', key: 'ph-p'}, {id: 'f_k', key: 'ph-k'}
+    ];
+
+
+    function toggleLanguage() {
+        const targetLang = currentLanguage === 'EN' ? 'HI' : 'EN';
+        const targetTranslations = translations[targetLang];
+        
+        // 1. Update text for all elements (Labels, Headers, Buttons, Options)
+        idsToTranslate.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const translationKey = id;
+                let newText = targetTranslations[translationKey];
+                
+                // Preserve unit labels (like °C, %) if they exist
+                if (el.querySelector('.unit-label')) {
+                    const unitSpan = el.querySelector('.unit-label').outerHTML;
+                    el.innerHTML = newText.replace(/(.*)(\s*\(.*\))?/, `$1 ${unitSpan}`);
+                } else {
+                    el.textContent = newText;
+                }
+            }
+        });
+        
+        // 2. Update Placeholder Text for Inputs
+        inputPlaceholders.forEach(item => {
+            const inputEl = document.getElementById(item.id);
+            if (inputEl) {
+                inputEl.placeholder = targetTranslations[item.key];
+            }
+        });
+
+        // 3. Update Global State and Toggle Button Text
+        currentLanguage = targetLang;
+        document.getElementById('lang-toggle').textContent = `Language: ${targetLang} ${targetLang === 'EN' ? '🇬🇧 / HI 🇮🇳' : '🇮🇳 / EN 🇬🇧'}`;
+        
+        // 4. Re-write the API function definitions to use the new translated prefix
+        const bestCropPrefix = targetTranslations['result-crop-best'];
+        window.recommendCrop = () => api('/recommend_crop', {N:val('r_n'), P:val('r_p'), K:val('r_k'), Temp:val('r_temp'), Humidity:val('r_hum'), pH:val('r_ph'), Rainfall:val('r_rain')}, 'r_res', (r) => {
+            const crop = r.Result;
+            let imageHtml = '';
+            
+            // Image/Placeholder logic copied here (no need to change logic, just encapsulation)
+            const cropsWithImagesSimple = {
+                'rice': 'https://via.placeholder.com/150/84cc16?text=RICE', 'maize': 'https://via.placeholder.com/150/f97316?text=MAIZE',
+                'cotton': 'https://via.placeholder.com/150/10b981?text=COTTON', 'chickpea': 'https://via.placeholder.com/150/3b82f6?text=CHICKPEA'
+            };
+            const generateFallbackPlaceholderInner = (text) => {
+                let hash = 0;
+                for (let i = 0; i < text.length; i++) { hash = text.charCodeAt(i) + ((hash << 5) - hash); }
+                let color = '#';
+                for (let i = 0; i < 3; i++) { let value = (hash >> (i * 8)) & 0xFF; color += ('00' + value.toString(16)).substr(-2); }
+                const placeholderText = text.substring(0, 3).toUpperCase();
+                return `<div style="width:100px; height:100px; border-radius:8px; margin-bottom:15px; border: 2px solid ${color}; background-color: ${color}30; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: ${color}; opacity: 0.9;">${placeholderText}</div>`;
+            };
+
+            if (cropsWithImagesSimple[crop.toLowerCase()]) {
+                imageHtml = `<img src="${cropsWithImagesSimple[crop.toLowerCase()]}" alt="${crop}" style="width:100px; height:100px; border-radius:8px; margin-bottom:15px; border: 2px solid var(--primary);">`;
+            } else {
+                imageHtml = generateFallbackPlaceholderInner(crop);
+            }
+            
+            // The output format using the translated prefix
+            return `
+                <h2>${bestCropPrefix} ${crop}</h2>
+                ${imageHtml}
+                <p style="margin-top: 10px;">
+                    <a href="https://www.google.com/search?tbm=isch&q=${crop} crop" target="_blank" style="color: #0d9488; font-weight: 600; text-decoration: underline;">
+                        [View Full Image Search]
+                    </a>
+                </p>
+            `;
+        });
+    }
+
+    // --- REST OF ORIGINAL JS FUNCTIONS ---
+
+    function tab(id) {
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        
+        const buttons = document.getElementsByTagName('button');
+        for(let b of buttons) { 
+            if(b.onclick && b.onclick.toString().includes(id)) b.classList.add('active'); 
+        }
+    }
+
+    function val(id) { return document.getElementById(id).value; }
+    function show(id, html) { const d=document.getElementById(id); d.style.display='block'; d.innerHTML=html; }
+    
+    async function api(url, data, id, fmt) {
+        try {
+            const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            const r = await res.json();
+            show(id, r.error ? `<span style="color:red">${r.error}</span>` : fmt(r));
+        } catch(e) { console.error(e); }
+    }
+
+    const predictYield = () => api('/predict_yield', {Temp:val('y_temp'), Humidity:val('y_hum'), pH:val('y_ph'), Rainfall:val('y_rain'), Crop:val('y_crop'), Model_Type:val('y_model')}, 'y_res', r=>`<h2>${r.Result} kg/ha</h2><small>${r.Model}</small>`);
+    
+    // Initial definition of recommendCrop (English version) - will be overwritten by toggleLanguage if called
+    const recommendCrop = () => api('/recommend_crop', {N:val('r_n'), P:val('r_p'), K:val('r_k'), Temp:val('r_temp'), Humidity:val('r_hum'), pH:val('r_ph'), Rainfall:val('r_rain')}, 'r_res', (r) => {
+        const crop = r.Result;
+        let imageHtml = '';
+        const bestCropPrefix = translations['EN']['result-crop-best'];
+        
+        const cropsWithImagesSimple = {
+            'rice': 'https://via.placeholder.com/150/84cc16?text=RICE', 'maize': 'https://via.placeholder.com/150/f97316?text=MAIZE',
+            'cotton': 'https://via.placeholder.com/150/10b981?text=COTTON', 'chickpea': 'https://via.placeholder.com/150/3b82f6?text=CHICKPEA'
+        };
+        const generateFallbackPlaceholderInner = (text) => {
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) { hash = text.charCodeAt(i) + ((hash << 5) - hash); }
+            let color = '#';
+            for (let i = 0; i < 3; i++) { let value = (hash >> (i * 8)) & 0xFF; color += ('00' + value.toString(16)).substr(-2); }
+            const placeholderText = text.substring(0, 3).toUpperCase();
+            return `<div style="width:100px; height:100px; border-radius:8px; margin-bottom:15px; border: 2px solid ${color}; background-color: ${color}30; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: ${color}; opacity: 0.9;">${placeholderText}</div>`;
+        };
+
+        if (cropsWithImagesSimple[crop.toLowerCase()]) {
+            imageHtml = `<img src="${cropsWithImagesSimple[crop.toLowerCase()]}" alt="${crop}" style="width:100px; height:100px; border-radius:8px; margin-bottom:15px; border: 2px solid var(--primary);">`;
+        } else {
+            imageHtml = generateFallbackPlaceholderInner(crop);
+        }
+
+        return `
+            <h2>${bestCropPrefix} ${crop}</h2>
+            ${imageHtml}
+            <p style="margin-top: 10px;">
+                <a href="https://www.google.com/search?tbm=isch&q=${crop} crop" target="_blank" style="color: #0d9488; font-weight: 600; text-decoration: underline;">
+                    [View Full Image Search]
+                </a>
+            </p>
+        `;
+    });
+    
+    // DIAGNOSTICS AI SCRIPT
+    document.getElementById('diagnostics-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const resDiv = document.getElementById('diag_res');
+        resDiv.style.display = 'block';
+        resDiv.innerHTML = `<h3 style="color:#0f172a;">Analyzing Image...</h3>`;
+
+        try {
+            const res = await fetch('/diagnose_disease', {
+                method: 'POST',
+                body: formData
+            });
+            const r = await res.json();
+
+            if (r.error || r.result.includes('Error')) {
+                resDiv.innerHTML = `<h3 style="color:red;">${r.result || r.error}</h3>`;
+            } else {
+                resDiv.innerHTML = `
+                    <h3 style="color:var(--dark); margin-top:0;">Diagnosis Complete</h3>
+                    <p><strong>Identified:</strong> <span style="font-size:1.1em; color:#0d9488;">${r.result}</span></p>
+                    <p><strong>Confidence:</strong> ${r.confidence}%</p>
+                    <p><strong>Treatment Advice:</strong> ${r.advice}</p>
+                `;
+            }
+        } catch (e) {
+            resDiv.innerHTML = `<h3 style="color:red;">Connection Error. Server Down?</h3>`;
+        }
+    });
+
+    const checkStorage = () => api('/storage_life', {Temp:val('st_temp'), Humidity:val('st_hum'), Crop:val('st_crop')}, 'st_res', r=>`Shelf Life: <b>${r.Days} Days</b><br>${r.Advice}`);
+    const smartWater = () => api('/smart_irrigation', {Temp:val('w_temp'), Humidity:val('w_hum'), Rainfall:val('w_rain'), Crop:val('w_crop')}, 'w_res', r=>`<b>${r.Status}</b><br>${r.Advice}`);
+    const getFert = () => api('/fertilizer_advice', {N:val('f_n'), P:val('f_p'), K:val('f_k'), Crop:val('f_crop')}, 'f_res', r=>r.Result);
+    
+    // Initial call to set language to English and set initial state
+    document.addEventListener('DOMContentLoaded', () => {
+        // Ensure the initial state of the toggle button is correct
+        document.getElementById('lang-toggle').textContent = `Language: EN 🇬🇧 / HI 🇮🇳`;
+    });
+
+</script>
+</body>
+</html>

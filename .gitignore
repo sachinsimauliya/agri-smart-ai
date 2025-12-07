@@ -1,0 +1,15 @@
+# Python environment
+__pycache__
+*.pyc
+venv/
+.venv/
+
+# Large model files (Do NOT upload these to Git)
+*.pkl
+*.h5
+*.model
+scaler.pkl
+yield_encoder.pkl
+recommender_model.pkl
+diagnostics_model_structure.h5
+lstm_model.h5
