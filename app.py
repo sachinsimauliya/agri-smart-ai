@@ -7,7 +7,7 @@ import tensorflow as tf
 import random
 from datetime import datetime, timedelta
 from io import BytesIO
-import cv2 # Required for system setup, though imported via from...
+import cv2 
 from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess_input
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from sklearn.preprocessing import LabelEncoder
@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelEncoder
 app = Flask(__name__)
 
 # --- MODEL LOADING ---
-yield_model, yield_le, rec_model, lstm_model, scaler, diag_model = None, None, None, None, None, None
+yield_model, yield_le, rec_model, lstm_model, scaler, y_scaler, diag_model = None, None, None, None, None, None, None
 
 try:
     if os.path.exists('yield_model.pkl'): yield_model = joblib.load('yield_model.pkl')
@@ -24,8 +24,9 @@ try:
     if os.path.exists('lstm_model.h5'):
         lstm_model = tf.keras.models.load_model('lstm_model.h5', compile=False)
         scaler = joblib.load('scaler.pkl')
+        if os.path.exists('y_scaler.pkl'):
+            y_scaler = joblib.load('y_scaler.pkl')
     
-    # Loading the structure file saved by the enhanced training script
     if os.path.exists('diagnostics_model_structure.h5'):
         diag_model = tf.keras.models.load_model('diagnostics_model_structure.h5', compile=False)
         print("✅ Diagnostics Model Structure Loaded.")
@@ -35,10 +36,8 @@ except Exception as e:
 
 # --- GLOBAL CONSTANTS ---
 
-# CROP NPK targets (N, P, K) - Nutrient requirements in kg/ha
 CROP_NPK = {'rice': [100, 50, 40], 'maize': [120, 60, 40], 'cotton': [120, 60, 60], 'chickpea': [20, 70, 30], 'wheat': [120, 60, 30], 'sugarcane': [150, 75, 75], 'fruit trees': [50, 30, 80], 'coffee': [100, 40, 40]}
 
-# DISEASE CLASSES (38 classes from PlantVillage Dataset)
 DISEASE_CLASSES = [
     'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
     'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Cherry_(including_sour)___healthy',
@@ -55,7 +54,6 @@ DISEASE_CLASSES = [
     'Tomato___healthy'
 ]
 
-# CROP WATER REQUIREMENTS (CWR) for Smart Irrigation
 CROP_WATER_FACTORS = {
     'Rice': 1.25, 'Maize': 1.00, 'Cotton': 0.85, 'Chickpea': 0.60, 'Fruits': 0.70
 }
@@ -79,13 +77,19 @@ def predict_yield():
         mod = "Super Ensemble"
 
         if d.get('Model_Type') == 'LSTM' and lstm_model:
-            scaled = scaler.transform([raw])
-            result = float(lstm_model.predict(scaled.reshape(1, 1, 5), verbose=0)[0][0])
+            scaled_input = scaler.transform([raw])
+            # Predict (Outcome is scaled 0-1)
+            scaled_pred = lstm_model.predict(scaled_input.reshape(1, 1, 5), verbose=0)
+            # Inverse Transform to get real kg/ha
+            if y_scaler:
+                res = float(y_scaler.inverse_transform(scaled_pred)[0][0])
+            else:
+                res = float(scaled_pred[0][0]) # Fallback
             mod = "Attention-LSTM"
         else:
-            result = float(yield_model.predict(pd.DataFrame([raw], columns=['Temperature', 'Humidity', 'pH', 'Rainfall', 'Crop_Encoded']))[0])
+            res = float(yield_model.predict(pd.DataFrame([raw], columns=['Temperature', 'Humidity', 'pH', 'Rainfall', 'Crop_Encoded']))[0])
         
-        result = max(0, result) 
+        result = max(0, res) 
         
         return jsonify({
             'Result': round(result, 2), 
